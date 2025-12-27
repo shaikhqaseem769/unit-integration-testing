@@ -11,9 +11,11 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "dayjs": "^1.11.19",
     "express": "^5.2.1",
     "mongoose": "^9.0.2",
-    "node-mocks-http": "^1.17.2"
+    "node-mocks-http": "^1.17.2",
+    "simple-git": "^3.30.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
