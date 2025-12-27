@@ -27,5 +27,15 @@ describe(endPointUrl, () => {
         expect(response.statusCode).toBe(201)
         expect(response.body.title).toBe(newTodo.title)
         expect(response.body.status).toBe(newTodo.status)
+    });
+
+    it(`should return status code 500 on malform data with POST ${endPointUrl}`, async () => {
+      const response = await request(server)
+      .post(endPointUrl)
+      .send({title: 'Status is missing'});
+      
+      expect(response.statusCode).toBe(500);
+
+      expect(response.body).toStrictEqual({message: 'Todo validation failed: status: Path `status` is required.'})
     })
 })

@@ -6,6 +6,6 @@ exports.createToDo = async (req, res, next) => {
         res.status(201).json(todoModel)
     } catch (err) {
     //    console.log('err', err.message);
-       next(err)
+        next(err)
     }
 }
