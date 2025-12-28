@@ -19,6 +19,18 @@ afterAll(async () => {
 });
 
 describe(endPointUrl, () => {
+
+	test(`GET ${endPointUrl}`, async () => {
+		const response = await request(server).get(endPointUrl);
+		
+		expect(response.statusCode).toBe(200);
+		expect(typeof response.body).toBe("object");
+		expect(Array.isArray(response.body)).toBeTruthy();
+		expect(response.body[0].title).toBeDefined();
+		expect(response.body[0].status).toBeDefined();
+
+	});
+
     it(`POST ${endPointUrl}`, async () => {
         const response = await request(server)
             .post(endPointUrl)
