@@ -7,7 +7,7 @@ const endPointUrl = '/todos/';
 
 
 let server;
-
+let firstTodo;
 beforeAll(async () => {
   await mongodb.connect();
   server = app.listen();
@@ -28,8 +28,23 @@ describe(endPointUrl, () => {
 		expect(Array.isArray(response.body)).toBeTruthy();
 		expect(response.body[0].title).toBeDefined();
 		expect(response.body[0].status).toBeDefined();
+    firstTodo = response.body[0];
+
 
 	});
+
+  test(`Get todo by id ${endPointUrl}:id`, async () => {
+    const response = (await request(server).get(`${endPointUrl}${firstTodo._id}`));
+    expect(response.statusCode).toBe(200);
+    expect(typeof response.body).toBe("object");
+    expect(response.body.title).toStrictEqual(firstTodo.title)
+    expect(response.body.status).toStrictEqual(firstTodo.status)
+  });
+
+  test(`Get todo by id doesn't exist ${endPointUrl}:id`, async () => {
+    const response = await request(server).get(`${endPointUrl}695166189f60cdc6632aa4a6`);
+    expect(response.statusCode).toBe(404)
+  })
 
     it(`POST ${endPointUrl}`, async () => {
         const response = await request(server)
