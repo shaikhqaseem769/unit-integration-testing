@@ -43,7 +43,8 @@ describe(endPointUrl, () => {
 
   test(`Get todo by id doesn't exist ${endPointUrl}:id`, async () => {
     const response = await request(server).get(`${endPointUrl}695166189f60cdc6632aa4a6`);
-    expect(response.statusCode).toBe(404)
+    expect(response.statusCode).toBe(404);
+    
   })
 
     it(`POST ${endPointUrl}`, async () => {
