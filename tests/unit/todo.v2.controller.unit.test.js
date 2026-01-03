@@ -87,8 +87,10 @@ describe("ToDoController.createToDo", () => {
     /**
      * MOCK BEHAVIOR:
      * Simulate successful document creation.
+     * mockResolvedValue is a Jest helper used to mock async functions so 
+     * they behave like a successfully resolved Promise.
      */
-    TodoModel.create.mockResolvedValue(newTodo);
+    TodoModel.create.mockResolvedValue(req.body);
 
     await ToDoController.createToDo(req, res, next);
 
@@ -97,7 +99,7 @@ describe("ToDoController.createToDo", () => {
      * Ensures controller sends correct payload to DB.
      * Prevents incorrect field mapping.
      */
-    expect(TodoModel.create).toHaveBeenCalledWith(newTodo);
+    expect(TodoModel.create).toHaveBeenCalledWith(req.body);
   });
 
   it("should return 201 response code", async () => {
@@ -120,7 +122,7 @@ describe("ToDoController.createToDo", () => {
   });
 
   it("should return json response", async () => {
-    TodoModel.create.mockResolvedValue(newTodo);
+    TodoModel.create.mockResolvedValue(req.body);
 
     await ToDoController.createToDo(req, res, next);
 
@@ -128,8 +130,9 @@ describe("ToDoController.createToDo", () => {
      * ASSERT:
      * Ensures API returns newly created object.
      * Prevents empty or incorrect responses.
+     * toStrictEqual is a Jest matcher used to compare two values for deep, exact equality.
      */
-    // expect(res._getJSONData()).toStrictEqual(newTodo);
+    
     expect(res._getJSONData()).toStrictEqual({
       message: "Todo created successfully",
       data: newTodo,
@@ -153,6 +156,40 @@ describe("ToDoController.createToDo", () => {
      * Prevents silent crashes.
      */
     expect(next).toHaveBeenCalledWith(errorMessage);
+  });
+
+  it("should not call next on success", async () => {
+    TodoModel.create.mockResolvedValue(newTodo);
+
+    await ToDoController.createToDo(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("should call TodoModel.create exactly once", async () => {
+    TodoModel.create.mockResolvedValue(newTodo);
+
+    await ToDoController.createToDo(req, res, next);
+
+    expect(TodoModel.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("should return application/json response", async () => {
+    TodoModel.create.mockResolvedValue(newTodo);
+
+    await ToDoController.createToDo(req, res, next);
+
+    expect(res.getHeader("Content-Type")).toContain("application/json");
+  });
+
+  it("should forward validation errors", async () => {
+    const validationError = new Error("Validation failed");
+
+    TodoModel.create.mockRejectedValue(validationError);
+
+    await ToDoController.createToDo(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(validationError);
   });
 });
 
@@ -234,6 +271,9 @@ describe("ToDoController.getToDos", () => {
       message: "Todos fetched successfully",
       data: allTodos,
     });
+
+    expect(next).not.toHaveBeenCalled();
+
   });
 
   it("should handle errors in get all todos", async () => {
@@ -254,6 +294,29 @@ describe("ToDoController.getToDos", () => {
      */
     expect(next).toHaveBeenCalledWith(errorMessage);
   });
+
+  it("should return empty array when no todos exist", async () => {
+    TodoModel.find.mockResolvedValue([]);
+
+    await ToDoController.getToDos(req, res, next);
+
+    expect(res.statusCode).toBe(200);
+    expect(res._getJSONData()).toStrictEqual({
+      message: "Todos fetched successfully",
+      data: [],
+    });
+
+    const response = res._getJSONData();
+    expect(response).toHaveProperty("message");
+    expect(response).toHaveProperty("data");
+    expect(Array.isArray(response.data)).toBeTruthy();
+    expect(response.data.length).toBe(0);
+    expect(next).not.toHaveBeenCalled();
+    expect(TodoModel.find).toHaveBeenCalledWith({});
+
+  });
+
+  
 });
 
 /* ===========================
@@ -294,6 +357,8 @@ describe("ToDoController.getTodoById", () => {
       data: allTodos[0],
     });
 
+    expect(res._isEndCalled()).toBeTruthy();
+
     // Ensures no error propagation
     expect(next).not.toHaveBeenCalled();
   });
@@ -321,6 +386,17 @@ describe("ToDoController.getTodoById", () => {
     await ToDoController.getTodoById(req, res, next);
 
     // Ensures centralized error handling
+    expect(next).toHaveBeenCalledWith(error);
+  });
+
+  it("should forward error for invalid object id", async () => {
+    req.params.id = "invalid-id";
+
+    const error = new Error("CastError");
+    TodoModel.findById.mockRejectedValue(error);
+
+    await ToDoController.getTodoById(req, res, next);
+
     expect(next).toHaveBeenCalledWith(error);
   });
 });

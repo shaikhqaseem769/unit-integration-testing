@@ -47,21 +47,22 @@ afterAll(async () => {
 });
 
 describe(endPointUrl, () => {
-
-    test(`POST ${endPointUrl}`, async () => {
-    const response = await request(server)
-      .post(endPointUrl)
-      .send(newTodo);
+  test(`POST ${endPointUrl}`, async () => {
+    const response = await request(server).post(endPointUrl).send(newTodo);
 
     // Ensures resource creation status
     expect(response.statusCode).toBe(201);
+    expect(response.headers["content-type"]).toContain("application/json");
 
     // Ensures response follows API contract
     expect(response.body).toHaveProperty("data");
+    expect(response.body).toHaveProperty("message");
 
     // Ensures created todo matches input
     expect(response.body.data.title).toBe(newTodo.title);
     expect(response.body.data.status).toBe(newTodo.status);
+    // ID correctness
+    expect(response.body.data._id).toMatch(/^[a-f\d]{24}$/i);
 
     // Store ID for update/delete tests
     newTodoId = response.body.data._id;
@@ -78,7 +79,7 @@ describe(endPointUrl, () => {
     // Ensures error message is returned
     expect(response.body).toHaveProperty("message");
   });
-  
+
   test(`GET ${endPointUrl}`, async () => {
     const response = await request(server).get(endPointUrl);
 
@@ -139,8 +140,6 @@ describe(endPointUrl, () => {
     });
   });
 
-
-
   test(`PUT ${endPointUrl}:id`, async () => {
     const response = await request(server)
       .put(`${endPointUrl}${newTodoId}`)
@@ -148,6 +147,9 @@ describe(endPointUrl, () => {
 
     // Ensures successful update
     expect(response.statusCode).toBe(200);
+    expect(response.body.data._id).toBe(newTodoId);
+
+    expect(response.headers["content-type"]).toContain("application/json");
 
     // Ensures response contains updated data
     expect(response.body).toHaveProperty("data");
@@ -157,9 +159,46 @@ describe(endPointUrl, () => {
     expect(response.body.data.status).toBe(newTodo.status);
   });
 
-  test(`DELETE ${endPointUrl}:id`, async () => {
+  test(`PUT ${endPointUrl}:id (not found)`, async () => {
     const response = await request(server)
-      .delete(`${endPointUrl}${newTodoId}`);
+      .put(`${endPointUrl}695166189f60cdc6632aa4a6`)
+      .send(newTodo);
+
+    expect(response.statusCode).toBe(404);
+    expect(response.headers["content-type"]).toContain("application/json");
+
+    expect(response.body).toStrictEqual({
+      message: "Todo not found",
+      data: {},
+    });
+  });
+
+  test(`PUT ${endPointUrl}:id (invalid id)`, async () => {
+    const response = await request(server)
+      .put(`${endPointUrl}invalid-id`)
+      .send(newTodo);
+
+    expect([400, 500]).toContain(response.statusCode);
+    expect(response.headers["content-type"]).toContain("application/json");
+
+  });
+
+  test(`PUT ${endPointUrl}:id (partial payload)`, async () => {
+    const response = await request(server)
+      .put(`${endPointUrl}${newTodoId}`)
+      .send({ title: "Updated title only" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.data._id).toBe(newTodoId);
+
+    expect(response.headers["content-type"]).toContain("application/json");
+  });
+
+
+
+
+  test(`DELETE ${endPointUrl}:id`, async () => {
+    const response = await request(server).delete(`${endPointUrl}${newTodoId}`);
 
     // 200 is used because API returns message + data
     expect(response.statusCode).toBe(200);
@@ -169,5 +208,39 @@ describe(endPointUrl, () => {
       message: "Todo deleted successfully",
       data: {},
     });
+
+    const getResponse = await request(server)
+    .get(`${endPointUrl}${newTodoId}`);
+
+    expect(getResponse.statusCode).toBe(404);
+
   });
+
+  test(`DELETE ${endPointUrl}:id (not found)`, async () => {
+    const response = await request(server)
+      .delete(`${endPointUrl}695166189f60cdc6632aa4a6`);
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toStrictEqual({
+      message: "Todo not found",
+      data: {},
+    });
+  });
+
+  test(`DELETE ${endPointUrl}:id twice`, async () => {
+    await request(server).delete(`${endPointUrl}${newTodoId}`);
+
+    const secondDelete = await request(server)
+      .delete(`${endPointUrl}${newTodoId}`);
+
+    expect(secondDelete.statusCode).toBe(404);
+  });
+
+  test(`DELETE ${endPointUrl}:id (invalid id)`, async () => {
+    const response = await request(server)
+      .delete(`${endPointUrl}invalid-id`);
+    expect(response.headers["content-type"]).toContain("application/json");
+    expect([400, 500]).toContain(response.statusCode);
+  });
+
 });
